@@ -6,6 +6,7 @@ class Bounceable extends StatefulWidget {
   final void Function(TapUpDetails)? onTapUp;
   final void Function(TapDownDetails)? onTapDown;
   final VoidCallback? onTapCancel;
+  final bool? disableDoubleClick;
 
   /// The reverse duration of the scaling animation when `onTapUp`.
   final Duration? duration;
@@ -40,6 +41,7 @@ class Bounceable extends StatefulWidget {
     this.reverseCurve = Curves.decelerate,
     this.scaleFactor = 0.8,
     this.hitTestBehavior,
+    this.disableDoubleClick = true,
   })  : assert(
           scaleFactor >= 0.0 && scaleFactor <= 1.0,
           "The valid range of scaleFactor is from 0.0 to 1.0.",
@@ -52,6 +54,8 @@ class Bounceable extends StatefulWidget {
 
 class _BounceableState extends State<Bounceable>
     with SingleTickerProviderStateMixin {
+  int _lastTapTimestamp = 0;
+
   late final AnimationController _controller = AnimationController(
     vsync: this,
     duration: widget.duration,
@@ -79,7 +83,16 @@ class _BounceableState extends State<Bounceable>
   }
 
   void _onTap() {
-    if (widget.onTap != null) widget.onTap!();
+    if(widget.disableDoubleClick == true) {
+      int current = DateTime.now().millisecondsSinceEpoch;
+      int startToEndDuration = (widget.duration?.inMilliseconds ?? 0) + (widget.reverseDuration?.inMilliseconds ?? 0);
+      if(current - _lastTapTimestamp < startToEndDuration) {
+        return;
+      }
+      _lastTapTimestamp = current;
+    }
+
+    widget.onTap?.call();
 
     _controller.reverse().then((_) {
       _controller.forward();
@@ -87,17 +100,17 @@ class _BounceableState extends State<Bounceable>
   }
 
   void _onTapUp(TapUpDetails details) {
-    if (widget.onTapUp != null) widget.onTapUp!(details);
+    widget.onTapUp?.call(details);
     _controller.forward();
   }
 
   void _onTapDown(TapDownDetails details) {
-    if (widget.onTapDown != null) widget.onTapDown!(details);
+    widget.onTapDown?.call(details);
     _controller.reverse();
   }
 
   void _onTapCancel() {
-    if (widget.onTapCancel != null) widget.onTapCancel!();
+    widget.onTapCancel?.call();
     _controller.forward();
   }
 
